@@ -2,7 +2,18 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { Tokens } from '../../../../src/fetch-tokens';
 import { blacklistAddresses } from '../../../../src/token-lists';
-const COVALENT_API_KEY = z.string().parse(process.env.COVALENT_API_KEY);
+// Read the Covalent API key from env, but don't throw during module load if it's missing.
+// Previously we used `z.string().parse(process.env.COVALENT_API_KEY)` which throws a ZodError
+// during module evaluation when the env var is undefined and caused an unhandled rejection.
+const rawCovalentApiKey = process.env.COVALENT_API_KEY;
+if (!rawCovalentApiKey) {
+  // warn instead of throwing to avoid crashing the server on startup. Individual
+  // requests will still fail if the key is required, but this avoids an unhandled
+  // exception during import.
+  // eslint-disable-next-line no-console
+  console.warn('COVALENT_API_KEY is not set. Covalent requests may fail.');
+}
+const COVALENT_API_KEY = rawCovalentApiKey ?? '';
 type ChainName =
   | 'eth-mainnet'
   | 'matic-mainnet'
@@ -55,7 +66,12 @@ const fetchTokens = async (chainId: number, evmAddress: string) => {
             item.quote_rate,
             item.quote_rate_24h,
           ].includes(null);
-          return item.balance !== '0' && hasQuotes && item.quote > 1;
+          return (
+            item.balance &&
+            BigInt(item.balance) > BigInt(0) &&
+            hasQuotes &&
+            item.quote > 1
+          );
         }) as Tokens;
 
       const nfts = allRelevantItems.filter(

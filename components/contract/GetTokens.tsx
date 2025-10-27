@@ -28,7 +28,10 @@ const TokenRow: React.FunctionComponent<{ token: Tokens[number] }> = ({
   };
   const { address } = useAccount();
   const { balance, contract_address, contract_ticker_symbol } = token;
-  const unroundedBalance = tinyBig(token.quote).div(token.quote_rate);
+  const unroundedBalance =
+    token.quote && token.quote_rate
+      ? tinyBig(token.quote).div(token.quote_rate)
+      : tinyBig(0);
   const roundedBalance = unroundedBalance.lt(0.001)
     ? unroundedBalance.round(10)
     : unroundedBalance.gt(1000)
@@ -60,7 +63,7 @@ const TokenRow: React.FunctionComponent<{ token: Tokens[number] }> = ({
       </a>{' '}
       (worth{' '}
       <span style={{ fontFamily: 'monospace' }}>
-        {usdFormatter.format(token.quote)}
+        {token.quote ? usdFormatter.format(token.quote) : '$0.00'}
       </span>
       )
     </div>
@@ -88,21 +91,21 @@ export const GetTokens = () => {
       setError(`Chain ${chain?.id} not supported. Coming soon!`);
     }
     setLoading(false);
-  }, [address, chain?.id]);
+  }, [address, chain?.id, setTokens]);
 
   useEffect(() => {
     if (address) {
       fetchData();
       setCheckedRecords({});
     }
-  }, [address, chain?.id]);
+  }, [address, chain?.id, fetchData, setCheckedRecords]);
 
   useEffect(() => {
     if (!isConnected) {
       setTokens([]);
       setCheckedRecords({});
     }
-  }, [isConnected]);
+  }, [isConnected, setTokens, setCheckedRecords]);
 
   if (loading) {
     return <Loading>Loading</Loading>;

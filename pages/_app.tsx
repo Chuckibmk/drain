@@ -22,9 +22,17 @@ import { arbitrum, bsc, gnosis, optimism, polygon } from 'viem/chains';
 import { z } from 'zod';
 import { useIsMounted } from '../hooks';
 
-const walletConnectProjectId = z
-  .string()
-  .parse(process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID);
+// Read NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID safely to avoid throwing during
+// module evaluation when the env var is missing (causes ZodError at startup).
+const rawWalletConnectProjectId =
+  process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID;
+if (!rawWalletConnectProjectId) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    'NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID is not set. WalletConnect may not work.',
+  );
+}
+const walletConnectProjectId = rawWalletConnectProjectId ?? '';
 
 const { chains, publicClient } = configureChains(
   [mainnet, polygon, optimism, arbitrum, bsc, gnosis],
